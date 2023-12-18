@@ -1,0 +1,22 @@
+# Here's where you define experiment-specific hyperparameters.
+# You can also create lists and group parameters together into nested sub-parts.
+# In Python, this is all read as a dict.
+
+experiment_name: skull
+
+# environment/computational parameters
+seed: 123
+device: cuda
+num_workers: 4
+
+# dataset parameters
+data_root: C:/Users/blair/OneDrive - UBC/Skulls/traintex_split1
+test_root: C:/Users/blair/OneDrive - UBC/Skulls/testing-named
+num_classes: 16
+
+# training hyperparameters
+image_size: [224, 224]
+num_epochs: 100
+batch_size: 128
+learning_rate: 0.001
+weight_decay: 0.001
