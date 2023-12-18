@@ -4,6 +4,7 @@ local
 
 *.h5
 *.json
+*.pth
 
 __pycache__
 *.pyc
