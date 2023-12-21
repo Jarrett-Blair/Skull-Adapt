@@ -12,8 +12,9 @@ num_workers: 4
 # dataset parameters
 src_train: C:/Users/blair/OneDrive - UBC/Skulls/traintex_split1
 src_val: C:/Users/blair/OneDrive - UBC/Skulls/traintex_split2
-target_train: C:/Users/blair/OneDrive - UBC/Skulls/test_split2
-target_val: C:/Users/blair/OneDrive - UBC/Skulls/test_split1
+target_train: C:/Users/blair/OneDrive - UBC/Skulls/test_split1
+target_val: C:/Users/blair/OneDrive - UBC/Skulls/test_split2
+target_eval: C:/Users/blair/OneDrive - UBC/Skulls/testing-named
 num_classes: 16
 
 # training hyperparameters
