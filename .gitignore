@@ -1,6 +1,7 @@
 datasets
 model_states
 local
+plots
 
 *.h5
 *.json
