@@ -2,6 +2,7 @@ datasets
 model_states
 local
 plots
+debug_loader.py
 
 *.h5
 *.json
