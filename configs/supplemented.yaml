@@ -1,0 +1,26 @@
+# Here's where you define experiment-specific hyperparameters.
+# You can also create lists and group parameters together into nested sub-parts.
+# In Python, this is all read as a dict.
+
+experiment_name: supplemented
+
+# environment/computational parameters
+seed: 123
+device: cuda
+num_workers: 4
+
+# dataset parameters
+src_train: C:/Users/blair/OneDrive - UBC/Skulls/supplemented
+src_val: C:/Users/blair/OneDrive - UBC/Skulls/traintex_split2
+target_val: C:/Users/blair/OneDrive - UBC/Skulls/test_split2
+num_classes: 16
+
+# training hyperparameters
+image_size: [224, 224]
+num_epochs: 100
+batch_size: 128
+learning_rate: 0.001
+weight_decay: 0.001
+
+# Model save path
+save_path: C:/Users/blair/OneDrive - UBC/Skull-Adapt/classifier/models
