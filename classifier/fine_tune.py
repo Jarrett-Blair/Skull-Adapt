@@ -6,6 +6,7 @@ Created on Sun Dec 24 20:51:55 2023
 """
 
 import os
+import json
 import argparse
 import yaml
 import glob
@@ -36,13 +37,13 @@ from pytorch_adapt.datasets import (
     SourceDataset,
     TargetDataset,
 )
-from pytorch_adapt.hooks import ClassifierHook, BNMHook, BSPHook
+from pytorch_adapt.hooks import FinetunerHook, ClassifierHook, BNMHook, BSPHook
 from pytorch_adapt.models import Discriminator, mnistC, mnistG
 from pytorch_adapt.utils.common_functions import batch_to_device
 from pytorch_adapt.validators import IMValidator
 
 parser = argparse.ArgumentParser(description='Train deep learning model.')
-parser.add_argument('--config', help='Path to config file', default='../configs/skull_MMD.yaml')
+parser.add_argument('--config', help='Path to config file', default='../configs/subset.yaml')
 args = parser.parse_args()
 
 # load config
@@ -76,11 +77,11 @@ transform_v = transforms.Compose([
 ])
 
 # Create the ImageFolder dataset for training data
-src_train = SourceDataset(datasets.ImageFolder(root=cfg['target_val'],
+src_train = SourceDataset(datasets.ImageFolder(root=cfg['src_train'],
                                      transform=transform_t))
-src_val = SourceDataset(datasets.ImageFolder(root=cfg['target_train'],
+src_val = SourceDataset(datasets.ImageFolder(root=cfg['src_val'],
                                      transform=transform_v))
-target_val_acc = SourceDataset(datasets.ImageFolder(root=cfg['src_val'],
+target_val_acc = SourceDataset(datasets.ImageFolder(root=cfg['target_val'],
                                      transform=transform_v))
 
 
@@ -91,7 +92,7 @@ eval_loader = dc(src_val = target_val_acc)
 
 device = torch.device("cuda")
 
-model_path = os.path.join(cfg['save_path'], "mmd/skull_MMD_src_loss.pth")
+model_path = os.path.join(cfg['save_path'], "mmd/skull_MMD_49.pth")
 model_weights = torch.load(model_path)
 G = model_weights['G'].to(device)
 C = model_weights['C'].to(device)
@@ -103,7 +104,7 @@ optimizers.create_with(models)
 optimizers = list(optimizers.values())
 
 
-hook = ClassifierHook(optimizers)
+hook = FinetunerHook(optimizers)
 
 
 src_t_loss = []
@@ -219,6 +220,20 @@ for epoch in range(100):
     for _ in range(3):
         try:
             torch.save(models, os.path.join(cfg['save_path'], f"{exp}_{epoch}.pth"))
+            with open('src_v_loss.json', 'w') as f:
+                json.dump(src_v_loss, f)
+
+            with open('src_t_loss.json', 'w') as f:
+                json.dump(src_t_loss, f)
+                
+            with open('src_v_acc.json', 'w') as f:
+                json.dump(src_v_acc, f)
+
+            with open('target_acc.json', 'w') as f:
+                json.dump(target_acc, f)
+
+            with open('target_loss.json', 'w') as f:
+                json.dump(target_loss, f)
         except RuntimeError as e:
             print(f"Error saving model: {e}. Retrying...")
             time.sleep(1)  # Wait for 1 second before retrying

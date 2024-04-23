@@ -77,7 +77,7 @@ def save_cams(loader, idxs, preds, species_list, model, target_layer, filepath):
 
 
 parser = argparse.ArgumentParser(description='Train deep learning model.')
-parser.add_argument('--config', help='Path to config file', default='../configs/skull_MMD.yaml')
+parser.add_argument('--config', help='Path to config file', default='../configs/supplemented.yaml')
 args = parser.parse_args()
 
 # load config
@@ -106,9 +106,9 @@ transform_v = transforms.Compose([
     transforms.ToTensor()
 ])
 
-src_val_torch = datasets.ImageFolder(root=cfg['target_train'], 
+src_val_torch = datasets.ImageFolder(root=cfg['src_val'], 
                                      transform=transform_v)
-target_val_torch = datasets.ImageFolder(root=cfg['src_val'], 
+target_val_torch = datasets.ImageFolder(root=cfg['target_val'], 
                                         transform=transform_v)
 
 # Create the ImageFolder dataset for training data
@@ -122,7 +122,7 @@ dc = DataloaderCreator(batch_size=1, num_workers=cfg['num_workers'])
 dataloaders = dc(src_val = src_val)
 eval_loader = dc(src_val = target_val_acc)
 
-model_path = os.path.join(cfg['save_path'], "mmd_fine_tune/skull_MMD_27.pth")
+model_path = os.path.join(cfg['save_path'], "supplemented/supplemented_23.pth")
 model_weights = torch.load(model_path)
 G = model_weights['G'].to(device)
 C = model_weights['C'].to(device)
@@ -145,9 +145,9 @@ true_labs = []
 features = []
 
 # Using dataloaders
-progressBar = trange(len(dataloaders['src_val']), position=0, leave=True)
+progressBar = trange(len(eval_loader['src_val']), position=0, leave=True)
 with torch.no_grad():
-    for idx, data in enumerate(dataloaders['src_val']):
+    for idx, data in enumerate(eval_loader['src_val']):
         data = batch_to_device(data, device)
         
         # forward pass
@@ -195,10 +195,10 @@ species_list = [
 
 
 target_layers = [combined_model[-9]]
-filepath = r'C:\Users\blair\OneDrive - UBC\Skulls\CAMs-MMD-Finetune/'
+filepath = r'C:\Users\blair\OneDrive - UBC\Skulls\CAMs-Supplemented/'
 
 
-dataset = dataloaders['src_val']
+dataset = eval_loader['src_val']
 random_numbers = [random.randint(0, len(dataset)) for _ in range(100)]
 
-save_cams(dataloaders, random_numbers, preds, species_list, combined_model, target_layers, filepath)
+save_cams(eval_loader, random_numbers, preds, species_list, combined_model, target_layers, filepath)

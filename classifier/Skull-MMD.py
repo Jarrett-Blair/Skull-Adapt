@@ -6,6 +6,7 @@ Created on Wed Dec 13 16:40:06 2023
 """
 
 import os
+import json
 import argparse
 import yaml
 import glob
@@ -130,16 +131,7 @@ dataloaders = dc(train = train,
                  src_val = src_val,
                  target_train = target_train,
                  target_val = target_val)
-tsne_loader = dc(train = train,
-                 src_train = src_train,
-                 src_val = target_tsne,
-                 target_train = target_train,
-                 target_val = target_val)
-eval_loader = dc(train = train,
-                 src_train = src_train,
-                 src_val = target_val_acc,
-                 target_train = target_train,
-                 target_val = target_val)
+eval_loader = dc(src_val = target_val_acc)
 
 
 device = torch.device("cuda")
@@ -275,33 +267,26 @@ for epoch in range(100):
     target_loss.append(avg_loss)
     target_acc.append(avg_oa)
     
-    save_yes = [src_v_loss[epoch] == min(src_v_loss),
-                src_v_acc[epoch] == max(src_v_acc),
-                target_loss[epoch] == min(target_loss),
-                target_acc[epoch] == max(target_acc),
-                ]    
-      
-    if any(save_yes):
-        for _ in range(3):  # Retry up to 3 times
-            try:
-                if save_yes[0]:
-                    torch.save(models, os.path.join(cfg['save_path'], f"{exp}_src_loss.pth"))
-                    src_l_epoch = epoch
-                if save_yes[1]:
-                    torch.save(models, os.path.join(cfg['save_path'], f"{exp}_src_acc.pth"))
-                    src_a_epoch = epoch
-                if save_yes[2]:
-                    torch.save(models, os.path.join(cfg['save_path'], f"{exp}_target_loss.pth"))
-                    target_l_epoch = epoch
-                if save_yes[3]:
-                    torch.save(models, os.path.join(cfg['save_path'], f"{exp}_target_acc.pth"))
-                    target_a_epoch = epoch
-                break  # If successful, exit the retry loop
-            except RuntimeError as e:
-                print(f"Error saving model: {e}. Retrying...")
-                time.sleep(1)  # Wait for 1 second before retrying
-            else:
-                print("Failed to save the model after multiple retries.")
+    for _ in range(3):
+        try:
+            torch.save(models, os.path.join(cfg['save_path'], f"{exp}_{epoch}.pth"))
+            with open('src_v_loss.json', 'w') as f:
+                json.dump(src_v_loss, f)
+
+            with open('src_t_loss.json', 'w') as f:
+                json.dump(src_t_loss, f)
+                
+            with open('src_v_acc.json', 'w') as f:
+                json.dump(src_v_acc, f)
+
+            with open('target_acc.json', 'w') as f:
+                json.dump(target_acc, f)
+
+            with open('target_loss.json', 'w') as f:
+                json.dump(target_loss, f)
+        except RuntimeError as e:
+            print(f"Error saving model: {e}. Retrying...")
+            time.sleep(1)  # Wait for 1 second before retrying
     
 
 

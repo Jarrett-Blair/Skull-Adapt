@@ -17,6 +17,7 @@ from tqdm import trange
 import numpy as np
 import pandas as pd
 import time
+import math
 
 import torch
 import torch.nn as nn
@@ -71,7 +72,7 @@ transform_v = transforms.Compose([
 
 src_val = SourceDataset(datasets.ImageFolder(root=cfg['src_val'],
                                      transform=transform_v))
-target_tsne = SourceDataset(datasets.ImageFolder(root=cfg['target_train'],
+target_tsne = SourceDataset(datasets.ImageFolder(root=cfg['target_val'],
                                      transform=transform_v))
 
 
@@ -81,7 +82,7 @@ tsne_loader = dc(src_val = target_tsne)
 
 device = torch.device("cuda")
 
-model_path = os.path.join(cfg['save_path'], "mmd_fine_tune/skull_MMD_30.pth")
+model_path = os.path.join(cfg['save_path'], "base/skull_base_12.pth")
 model_weights = torch.load(model_path)
 G = model_weights['G'].to(device)
 C = model_weights['C'].to(device)
@@ -127,7 +128,7 @@ def conf_table(conf_matrix, Y, prop = True):
 
 
 
-def plt_conf(table, Y, report, domain):
+def plt_conf(table, Y, report, domain, model):
     """
     Plots a confusion matrix
 
@@ -141,26 +142,30 @@ def plt_conf(table, Y, report, domain):
     """
       
     accuracy = round(report["accuracy"], 3)
+    n = len(Y)
     
     custom_gradient = ["#201547", "#00BCE1"]
     n_bins = 100  # Number of bins for the gradient
 
     custom_cmap = LinearSegmentedColormap.from_list("CustomColormap", custom_gradient, N=n_bins)
 
-    plt.figure(figsize=(16, 12))
+    plt.figure(figsize=(16, 12),
+               dpi=300)
     sns.set(font_scale=1)
     sns.set_style("white")
     
-    ax = sns.heatmap(table, cmap=custom_cmap, cbar_kws={'label': 'Proportion'})
+    line_color_rgba = (1, 1, 1, 0.25)
+    ax = sns.heatmap(table, cmap=custom_cmap, cbar=False, linecolor=line_color_rgba, linewidths=.5)
     
-    ax.set_title(f"Accuracy = {accuracy} ; Domain = {domain}", fontsize=24)
+    ax.set_title(f"Model: {model} | Domain: {domain}", fontsize=32)
+    #ax.set_title(f"Accuracy: {accuracy} | Model: {model} | Domain: {domain}", fontsize=32)
     # Customize the axis labels and ticks
-    ax.set_xlabel("Predicted", fontsize=20)
-    ax.set_ylabel("Actual", fontsize=20)
+    ax.set_xlabel("Predicted", fontsize=32)
+    ax.set_ylabel("Actual", fontsize=32)
     ax.set_xticks(np.arange(len(Y)) + 0.5)
     ax.set_yticks(np.arange(len(Y)) + 0.5)
-    ax.set_xticklabels(Y, fontsize=12)
-    ax.set_yticklabels(Y, rotation=0, fontsize=12)
+    ax.set_xticklabels(Y, fontsize=12 + 12*(math.log(37/n, 10)))
+    ax.set_yticklabels(Y, rotation=0, fontsize=12 + 12*(math.log(37/n, 10)))
     
     # Add annotation
     ax.annotate("Predicted", xy=(0.5, -0.2), xytext=(0.5, -0.5), ha='center', va='center',
@@ -170,6 +175,13 @@ def plt_conf(table, Y, report, domain):
     # Customize the appearance directly on the Axes object
     ax.set_xticklabels(Y, rotation=45, ha='right')
     
+    # Get the color bar
+    cbar = ax.figure.colorbar(ax.collections[0])
+    
+    # Adjust color bar font size
+    cbar.ax.set_ylabel('Proportion', rotation=90, fontsize=24)  # Rotate the label to 90 degrees
+    cbar.ax.get_yticklabels()[0].set_verticalalignment('center')  # Adjust vertical alignment for the label
+    cbar.ax.tick_params(labelsize=20) 
     return plt.gcf()
 
 
@@ -193,20 +205,20 @@ with torch.no_grad():
         progressBar.update(1)
 progressBar.close()
 
-# Run this next to append source data features. This way both will be used in the tsne
-progressBar = trange(len(dataloaders['src_val']), position=0, leave=True)
-with torch.no_grad():
-    for idx, data in enumerate(dataloaders['src_val']):
-        data = batch_to_device(data, device)
-        # forward pass
-        features.append(G(data['src_imgs']))
-        probs.append(C(features[idx]))
-        true_labs.append(data['src_labels'])
+# # Run this next to append source data features. This way both will be used in the tsne
+# progressBar = trange(len(dataloaders['src_val']), position=0, leave=True)
+# with torch.no_grad():
+#     for idx, data in enumerate(dataloaders['src_val']):
+#         data = batch_to_device(data, device)
+#         # forward pass
+#         features.append(G(data['src_imgs']))
+#         probs.append(C(features[idx]))
+#         true_labs.append(data['src_labels'])
 
-        preds.append(torch.argmax(probs[idx], dim=1))
+#         preds.append(torch.argmax(probs[idx], dim=1))
 
-        progressBar.update(1)
-progressBar.close()
+#         progressBar.update(1)
+# progressBar.close()
 
 
 preds = torch.cat(preds, dim=0)
@@ -227,11 +239,30 @@ features = features.numpy()
 species = os.listdir(cfg['src_train'])
 sp_labs = np.array(species)[true_labs]
 pred_labs = np.array(species)[preds]
-
+species_ordered = ['Lynx canadensis',
+                   'Lynx rufus',
+                   'Canis latrans',
+                   'Canis lupus',
+                   'Vulpes lagopus',
+                   'Vulpes vulpes',
+                   'Gulo gulo',
+                   'Lontra canadensis',
+                   'Martes americana',
+                   'Mephitis mephitis',
+                   'Neogale vison',
+                   'Pekania pennanti',
+                   'Procyon lotor',
+                   'Ursus americanus',
+                   'Ursus arctos',
+                   'Ursus maritimus',
+]
+sp_ord_idx = [4, 5, 0, 1, 14, 15, 2, 3, 6, 8, 9, 7, 10, 11, 12, 13]
 
 conf_matrix = confusion_matrix(sp_labs,
                       pred_labs,
                       labels = species)
+
+conf_matrix = conf_matrix[sp_ord_idx, :][:, sp_ord_idx]
 
 conf_tab = conf_table(conf_matrix, species)
 
@@ -240,6 +271,6 @@ report = classification_report(sp_labs,
                       output_dict=True,
                       zero_division = 1)
 
-plt_conf(conf_tab, species, report, domain="Target")
-plt_conf(conf_tab, species, report, domain="Source")
+plt_conf(conf_tab, species_ordered, report, domain="Target", model = "Baseline")
+# plt_conf(conf_tab, species_ordered, report, domain="Source", model = "Baseline")
 

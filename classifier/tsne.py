@@ -77,7 +77,7 @@ tsne_loader = dc(src_val = target_tsne)
 
 device = torch.device("cuda")
 
-model_path = os.path.join(cfg['save_path'], "base/skull_base_src_loss.pth")
+model_path = os.path.join(cfg['save_path'], "subset/subset_24.pth")
 model_weights = torch.load(model_path)
 G = model_weights['G'].to(device)
 C = model_weights['C'].to(device)
@@ -158,8 +158,30 @@ tsne_embeddings = tsne.fit_transform(features)
 
 # markers = {'Source': '.', 'Target': '1'}
 
-species = os.listdir(cfg['src_train'])
-sp_labs = np.array(species)[true_labs]
+species_ordered = ['Lynx canadensis',
+                   'Lynx rufus',
+                   'Canis latrans',
+                   'Canis lupus',
+                   'Vulpes lagopus',
+                   'Vulpes vulpes',
+                   'Gulo gulo',
+                   'Lontra canadensis',
+                   'Martes americana',
+                   'Mephitis mephitis',
+                   'Neogale vison',
+                   'Pekania pennanti',
+                   'Procyon lotor',
+                   'Ursus americanus',
+                   'Ursus arctos',
+                   'Ursus maritimus',
+]
+sp_ord_idx = [2, 3, 6, 7, 0, 1, 8, 11, 9, 10, 12, 13, 14, 15, 4, 5]
+
+true_ord = []
+for i in range(0, len(true_labs)):
+    true_ord.append(sp_ord_idx[true_labs[i]])
+    
+sp_labs = np.array(species_ordered)[true_ord]
 
 tsne_df = pd.DataFrame({'tsne1': tsne_embeddings[:,0],
                         'tsne2': tsne_embeddings[:,1],
@@ -171,12 +193,19 @@ c25 = ["#1C86EE", "#E31A1C", "#008B00", "#6A3D9A", "#FF7F00", "#000000", "#FFD70
        "#B03060", "#FF83FA", "#FF1493", "#0000FF", "#36648B", "#00CED1", "#00FF00", 
        "#8B8B00", "#CDCD00", "#8B4500", "#A52A2A"]
 
-def tsne_plot(data, palette = 'viridis', domains = False, title = None,
-              xlim = None, ylim = None):
+def tsne_plot(data, hue_order = None, palette = 'viridis', domains = False, 
+              title = None, xlim = None, ylim = None, exp = None): 
     
     style = None
     if domains:
         style = 'domain'
+    
+    markers = True
+    edgecolor = 'white'
+    if title == "Source":
+        markers = ['X']
+        style = 'domain'
+        edgecolor = 'black'
     
     xmin = min(data['tsne1']) - 5
     xmax = max(data['tsne1']) + 5
@@ -190,55 +219,163 @@ def tsne_plot(data, palette = 'viridis', domains = False, title = None,
     if ylim != None:
         ymin = ylim[0]
         ymax = ylim[1]
+        
+    plt.figure(dpi=300) 
     
-    sns.scatterplot(x='tsne1', 
+    ax = sns.scatterplot(x='tsne1', 
                     y='tsne2', 
-                    hue='labels', 
+                    hue=title, 
+                    hue_order= hue_order,
                     palette=palette,
                     style = style,
-                    data=data)
-    
+                    markers=markers,
+                    s = 25,
+                    data=data,
+                    edgecolor = edgecolor)
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    ax.set_title(exp)
+    handles, labels = ax.get_legend_handles_labels()
+    print(handles)
+    print(labels)
+    ax.legend(title='Domains', bbox_to_anchor=(1.05, 1), ncol=4, loc='upper left', handles=handles[1:3], labels=labels[1:3], fontsize = '10', markerscale = 1.5)
+
     plt.xlim(xmin, xmax)  # Set the x-axis bounds
     plt.ylim(ymin, ymax)  # Set the y-axis bounds
-    plt.legend(bbox_to_anchor=(1.05, 1), ncol=1, loc='upper left')
-    plt.title(title)
-    plt.show()    
+    plt.xticks([])
+    plt.yticks([])    
+    plt.tight_layout()
+    #plt.savefig(f'..\plots\{exp}_{title}.png', dpi=300)
+    plt.show()
+    
 
 xlim = (min(tsne_df['tsne1']) - 5, max(tsne_df['tsne1']) + 5)
 ylim = (min(tsne_df['tsne2']) - 5, max(tsne_df['tsne2']) + 5)
 
+exp = 'Photograph subset'
 
 tsne_plot(data = tsne_df, 
+          hue_order = ['Source', 'Target'],
           palette = c25, 
           domains = True,
-          title = "Target and Source",
+          title = "domain",
+          exp = exp,
+          xlim = xlim,
+          ylim = ylim)
+
+tsne_plot(data = tsne_df, 
+          hue_order = species_ordered,
+          palette = c25, 
+          domains = True,
+          title = "labels",
+          exp = exp,
           xlim = xlim,
           ylim = ylim)
 
 just_target = tsne_df[tsne_df['domain'] == 'Target']
 just_source = tsne_df[tsne_df['domain'] == 'Source']
 
-tsne_plot(data = just_target, 
+target = tsne_plot(data = just_target, 
+          species = species_ordered,
           palette = c25,
           title = "Target",
           xlim = xlim,
-          ylim = ylim)
+          ylim = ylim,
+          exp = exp)
 
-tsne_plot(data = just_source, 
+source = tsne_plot(data = just_source, 
+          species = species_ordered,
           palette = c25,
           title = "Source",
           xlim = xlim,
-          ylim = ylim)
+          ylim = ylim,
+          exp = exp)
+
+
+
+
 
 from sklearn.metrics import silhouette_score
 
-silhouette_score(just_source[["tsne1", "tsne2"]], just_source["labels"])
-silhouette_score(just_target[["tsne1", "tsne2"]], just_target["labels"])
+print(silhouette_score(just_source[["tsne1", "tsne2"]], just_source["labels"]))
+print(silhouette_score(just_target[["tsne1", "tsne2"]], just_target["labels"]))
 
 
+def tsne_plot_overlay(data, data2, species = None, palette = 'viridis', domains = False, 
+              title = None, xlim = None, ylim = None, exp = None): 
+    
+    style = None
+    if domains:
+        style = 'domain'
+    
+    markers = True
+    edgecolor = 'black'
+    if title == "Source":
+        markers = ['X']
+    
+    xmin = min(data['tsne1']) - 5
+    xmax = max(data['tsne1']) + 5
+    ymin = min(data['tsne2']) - 5
+    ymax = max(data['tsne2']) + 5
+    
+    if xlim != None:
+        xmin = xlim[0]
+        xmax = xlim[1]
+    
+    if ylim != None:
+        ymin = ylim[0]
+        ymax = ylim[1]
+        
+    hue_order = species
+    plt.figure(dpi=300) 
+    
+    ax = sns.scatterplot(x='tsne1', 
+                    y='tsne2', 
+                    hue='labels', 
+                    hue_order= hue_order,
+                    palette=palette,
+                    style = style,
+                    s = 25,
+                    data=data,
+                    edgecolor = 'black',
+                    legend=False)
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    ax.set_title(exp)
+    # handles, labels = ax.get_legend_handles_labels()
+    # ax.legend(bbox_to_anchor=(1.05, 1), ncol=1, loc='upper left', handles=handles[1:16], labels=labels[1:16], fontsize = '10', markerscale = 1.5)
+    bx = sns.scatterplot(x='tsne1', 
+                    y='tsne2', 
+                    hue='labels', 
+                    hue_order= hue_order,
+                    palette=palette,
+                    style = style,
+                    markers=markers,
+                    s = 25,
+                    data=data2,
+                    edgecolor = 'white',
+                    legend=False)
+    bx.set_xlabel('')
+    bx.set_ylabel('')
+    bx.set_title(exp)
+    
+    plt.xlim(xmin, xmax)  # Set the x-axis bounds
+    plt.ylim(ymin, ymax)  # Set the y-axis bounds
+    plt.xticks([])
+    plt.yticks([])    
+    plt.tight_layout()
+    #plt.savefig(f'..\plots\{exp}_{title}.png', dpi=300)
+    plt.show()
+    
 
-
-
+tsne_plot_overlay(data = just_target, 
+                  data2= just_source,
+          species = species_ordered,
+          palette = c25,
+          title = "Source",
+          xlim = xlim,
+          ylim = ylim,
+          exp = exp)
 
 
 

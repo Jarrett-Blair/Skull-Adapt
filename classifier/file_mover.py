@@ -38,7 +38,7 @@ for sp in species:
     sp_dict[sp] = get_unique_combinations(sub_dir)
     
 
-sub_sp_dict = {key: original_list[4:6] for key, original_list in sp_dict.items()}
+sub_sp_dict = {key: [original_list[1], original_list[6]] for key, original_list in sp_dict.items()}
 
 def copy_files(src_dir, dest_dir, sub_sp_dict):
 
@@ -57,7 +57,7 @@ def copy_files(src_dir, dest_dir, sub_sp_dict):
                 shutil.copy2(source_path, destination_path)
                 
 
-dest_dir = r"C:\Users\blair\OneDrive - UBC\Skulls\test-split1.5"
+dest_dir = r"C:\Users\blair\OneDrive - UBC\Skulls\test_split1.5"
 
 copy_files(parent_dir, dest_dir, sub_sp_dict)
 
@@ -83,11 +83,11 @@ copy_files(parent_dir, dest_dir, sub_sp_dict)
 
 #     return subsection_count
 
-# sub_sp_dict = {key: original_list[4:6] for key, original_list in sp_dict.items()}
-# file_count = count_files(parent_dir, sub_sp_dict)
+# sub_sp_dict = {key: [original_list[1], original_list[6]] for key, original_list in sp_dict.items()}
+# count_files(parent_dir, sub_sp_dict)
 
 
-## This sees how many files were actually moved
+# ## This sees how many files were actually moved
 # def count_files_in_subdirectories(directory_path):
 #     # Get a list of subdirectories
 #     subdirectories = [d for d in os.listdir(directory_path) if os.path.isdir(os.path.join(directory_path, d))]
@@ -105,4 +105,4 @@ copy_files(parent_dir, dest_dir, sub_sp_dict)
 
 # # Example usage:
 # directory_path = dest_dir
-# result = count_files_in_subdirectories(directory_path)
+# counts = count_files_in_subdirectories(directory_path)
