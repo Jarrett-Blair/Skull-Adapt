@@ -1,49 +1,29 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Dec 24 20:51:55 2023
-
-@author: blair
-"""
-
 import os
 import json
 import argparse
 import yaml
-import glob
 from tqdm import trange
-import numpy as np
-import pandas as pd
 import time
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.optim import SGD
 from torchvision import datasets, transforms
 
-# let's import our own classes and functions!
 os.chdir(r"C:\Users\blair\OneDrive - UBC\Skull-Adapt\classifier")
 from util import init_seed
 from model_cam import CustomResNet18
 
-
-import torch
-from tqdm import tqdm
-
 from pytorch_adapt.containers import Models, Optimizers
 from pytorch_adapt.datasets import (
     DataloaderCreator,
-    CombinedSourceAndTargetDataset,
     SourceDataset,
-    TargetDataset,
 )
-from pytorch_adapt.hooks import FinetunerHook, ClassifierHook, BNMHook, BSPHook
-from pytorch_adapt.models import Discriminator, mnistC, mnistG
+from pytorch_adapt.hooks import ClassifierHook
+from pytorch_adapt.models import Discriminator
 from pytorch_adapt.utils.common_functions import batch_to_device
-from pytorch_adapt.validators import IMValidator
 
 parser = argparse.ArgumentParser(description='Train deep learning model.')
-parser.add_argument('--config', help='Path to config file', default='../configs/subset.yaml')
+parser.add_argument('--config', help='Path to config file', default='../configs/supplemented.yaml')
 args = parser.parse_args()
 
 # load config
@@ -90,21 +70,23 @@ dataloaders = dc(train = src_train,
                  src_val = src_val)
 eval_loader = dc(src_val = target_val_acc)
 
+
 device = torch.device("cuda")
 
-model_path = os.path.join(cfg['save_path'], "mmd/skull_MMD_49.pth")
-model_weights = torch.load(model_path)
-G = model_weights['G'].to(device)
-C = model_weights['C'].to(device)
-
-models = Models({"G": G, "C": C})
+model = CustomResNet18(cfg['num_classes']) 
+G = model.features_conv.to(device)
+G.add_module('36', model.max_pool)
+G.add_module('37', nn.Flatten())
+C = model.classifier.to(device)
+D = Discriminator(in_size=25088, h=4096).to(device)
+models = Models({"G": G, "C": C, "D": D})
 
 optimizers = Optimizers((torch.optim.Adam, {"lr": 0.0001}))
 optimizers.create_with(models)
 optimizers = list(optimizers.values())
 
 
-hook = FinetunerHook(optimizers)
+hook = ClassifierHook(optimizers)
 
 
 src_t_loss = []
@@ -179,10 +161,10 @@ for epoch in range(100):
     src_v_acc.append(avg_oa)
 
     models.eval()
-    criterion = nn.CrossEntropyLoss()   # we still need a criterion to calculate the validation loss
+    criterion = nn.CrossEntropyLoss()
 
     # running averages
-    loss_total, oa_total = 0.0, 0.0     # for now, we just log the loss and overall accuracy (OA)
+    loss_total, oa_total = 0.0, 0.0
 
     # iterate over dataLoader
     progressBar = trange(len(eval_loader["src_val"]), position=0, leave=True)
@@ -198,7 +180,7 @@ for epoch in range(100):
 
             # log statistics
             loss_total += loss.item()
-            
+
             pred_label = torch.argmax(prediction, dim=1)
             oa = torch.mean((pred_label == labels).float())
             oa_total += oa.item()
@@ -214,6 +196,7 @@ for epoch in range(100):
             )
             progressBar.update(1)
     progressBar.close()
+    
     target_loss.append(avg_loss)
     target_acc.append(avg_oa)
     
@@ -236,34 +219,44 @@ for epoch in range(100):
                 json.dump(target_loss, f)
         except RuntimeError as e:
             print(f"Error saving model: {e}. Retrying...")
-            time.sleep(1)  # Wait for 1 second before retrying
+            time.sleep(1)
 
-
-   
-    # save_yes = [src_v_loss[epoch] == min(src_v_loss),
-    #             src_v_acc[epoch] == max(src_v_acc),
-    #             ]    
-      
-    # if any(save_yes):
-    #     for _ in range(3):  # Retry up to 3 times
-    #         try:
-    #             if save_yes[0]:
-    #                 torch.save(models, os.path.join(cfg['save_path'], f"{exp}_src_loss.pth"))
-    #                 src_l_epoch = epoch
-    #             if save_yes[1]:
-    #                 torch.save(models, os.path.join(cfg['save_path'], f"{exp}_src_acc.pth"))
-    #                 src_a_epoch = epoch
-    #             break  # If successful, exit the retry loop
-    #         except RuntimeError as e:
-    #             print(f"Error saving model: {e}. Retrying...")
-    #             time.sleep(1)  # Wait for 1 second before retrying
-    #         else:
-    #             print("Failed to save the model after multiple retries.")
     
 
+import matplotlib.pyplot as plt
 
+plt.plot(src_t_loss, label = "Source Train")
+plt.plot(src_v_loss, label = "Source Val")
+plt.legend()
+plt.title('Source Loss')
+plt.show()
 
+plt.plot(src_v_acc, label = "Source Val")
+plt.plot(target_acc, label = "Target")
+plt.legend()
+plt.title('Accuracy')
+plt.show()
 
+plt.plot(target_loss)
+plt.legend()
+plt.title('Target Loss')
+plt.show()
 
+import json
+
+with open('src_v_loss.json', 'w') as f:
+    json.dump(src_v_loss, f)
+
+with open('src_t_loss.json', 'w') as f:
+    json.dump(src_t_loss, f)
+    
+with open('src_v_acc.json', 'w') as f:
+    json.dump(src_v_acc, f)
+
+with open('target_acc.json', 'w') as f:
+    json.dump(target_acc, f)
+
+with open('target_loss.json', 'w') as f:
+    json.dump(target_loss, f)
 
 

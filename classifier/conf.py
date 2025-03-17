@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Jan 13 18:06:29 2024
-
-@author: blair
-"""
 from sklearn.metrics import classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
@@ -12,39 +6,24 @@ import seaborn as sns
 import os
 import argparse
 import yaml
-import glob
 from tqdm import trange
 import numpy as np
 import pandas as pd
-import time
 import math
 
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.optim import SGD
 from torchvision import datasets, transforms
 
 # let's import our own classes and functions!
 os.chdir(r"C:\Users\blair\OneDrive - UBC\Skull-Adapt\classifier")
 from util import init_seed
-from model_cam import CustomResNet18
 
-
-import torch
-from tqdm import tqdm
-
-from pytorch_adapt.containers import Models, Optimizers
+from pytorch_adapt.containers import Models
 from pytorch_adapt.datasets import (
     DataloaderCreator,
-    CombinedSourceAndTargetDataset,
     SourceDataset,
-    TargetDataset,
 )
-from pytorch_adapt.hooks import ClassifierHook, BNMHook, BSPHook
-from pytorch_adapt.models import Discriminator, mnistC, mnistG
 from pytorch_adapt.utils.common_functions import batch_to_device
-from pytorch_adapt.validators import IMValidator
 
 parser = argparse.ArgumentParser(description='Train deep learning model.')
 parser.add_argument('--config', help='Path to config file', default='../configs/skull_MMD.yaml')
@@ -141,7 +120,6 @@ def plt_conf(table, Y, report, domain, model):
     Saves plot to directory
     """
       
-    accuracy = round(report["accuracy"], 3)
     n = len(Y)
     
     custom_gradient = ["#201547", "#00BCE1"]
@@ -205,20 +183,20 @@ with torch.no_grad():
         progressBar.update(1)
 progressBar.close()
 
-# # Run this next to append source data features. This way both will be used in the tsne
-# progressBar = trange(len(dataloaders['src_val']), position=0, leave=True)
-# with torch.no_grad():
-#     for idx, data in enumerate(dataloaders['src_val']):
-#         data = batch_to_device(data, device)
-#         # forward pass
-#         features.append(G(data['src_imgs']))
-#         probs.append(C(features[idx]))
-#         true_labs.append(data['src_labels'])
+# Run this next to append source data features. This way both will be used in the tsne
+progressBar = trange(len(dataloaders['src_val']), position=0, leave=True)
+with torch.no_grad():
+    for idx, data in enumerate(dataloaders['src_val']):
+        data = batch_to_device(data, device)
+        # forward pass
+        features.append(G(data['src_imgs']))
+        probs.append(C(features[idx]))
+        true_labs.append(data['src_labels'])
 
-#         preds.append(torch.argmax(probs[idx], dim=1))
+        preds.append(torch.argmax(probs[idx], dim=1))
 
-#         progressBar.update(1)
-# progressBar.close()
+        progressBar.update(1)
+progressBar.close()
 
 
 preds = torch.cat(preds, dim=0)

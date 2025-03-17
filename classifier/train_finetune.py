@@ -1,47 +1,25 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Feb  4 17:11:03 2024
-
-@author: blair
-"""
-
 import os
 import json
 import argparse
 import yaml
-import glob
 from tqdm import trange
-import numpy as np
-import pandas as pd
 import time
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.optim import SGD
 from torchvision import datasets, transforms
 
 # let's import our own classes and functions!
 os.chdir(r"C:\Users\blair\OneDrive - UBC\Skull-Adapt\classifier")
 from util import init_seed
-from model_cam import CustomResNet18
-
-
-import torch
-from tqdm import tqdm
 
 from pytorch_adapt.containers import Models, Optimizers
 from pytorch_adapt.datasets import (
     DataloaderCreator,
-    CombinedSourceAndTargetDataset,
     SourceDataset,
-    TargetDataset,
 )
-from pytorch_adapt.adapters import Finetuner
-from pytorch_adapt.hooks import FinetunerHook, ClassifierHook, BNMHook, BSPHook
-from pytorch_adapt.models import Discriminator, mnistC, mnistG
+from pytorch_adapt.hooks import FinetunerHook
 from pytorch_adapt.utils.common_functions import batch_to_device
-from pytorch_adapt.validators import IMValidator
 
 parser = argparse.ArgumentParser(description='Train deep learning model.')
 parser.add_argument('--config', help='Path to config file', default='../configs/subset.yaml')
@@ -100,7 +78,12 @@ C = model_weights['C'].to(device)
 
 models = Models({"G": G, "C": C})
 
-adapter = Finetuner(models)
+optimizers = Optimizers((torch.optim.Adam, {"lr": 0.0001}))
+optimizers.create_with(models)
+optimizers = list(optimizers.values())
+
+
+hook = FinetunerHook(optimizers)
 
 
 src_t_loss = []
@@ -112,10 +95,10 @@ target_acc = []
 for epoch in range(100):
 
     # train loop
-    criterion = nn.CrossEntropyLoss()   # we still need a criterion to calculate the validation loss
+    criterion = nn.CrossEntropyLoss()
 
     # running averages
-    loss_total, oa_total = 0.0, 0.0     # for now, we just log the loss and overall accuracy (OA)
+    loss_total, oa_total = 0.0, 0.0
 
     # iterate over dataLoader
     progressBar = trange(len(dataloaders["train"]), position=0, leave=True)
@@ -123,7 +106,7 @@ for epoch in range(100):
     models.train()
     for idx, data in enumerate(dataloaders["train"]):
         data = batch_to_device(data, device)
-        loss = adapter.training_step(data)
+        _, loss = hook({**models, **data})
         tot_loss += loss['total_loss']['src_c_loss']
         progressBar.set_description(f"Epoch : {epoch}")
         progressBar.update(1)
@@ -135,10 +118,10 @@ for epoch in range(100):
 
     # eval loop
     models.eval()
-    criterion = nn.CrossEntropyLoss()   # we still need a criterion to calculate the validation loss
+    criterion = nn.CrossEntropyLoss()
 
     # running averages
-    loss_total, oa_total = 0.0, 0.0     # for now, we just log the loss and overall accuracy (OA)
+    loss_total, oa_total = 0.0, 0.0
 
     # iterate over dataLoader
     progressBar = trange(len(dataloaders["src_val"]), position=0, leave=True)
@@ -175,10 +158,10 @@ for epoch in range(100):
     src_v_acc.append(avg_oa)
 
     models.eval()
-    criterion = nn.CrossEntropyLoss()   # we still need a criterion to calculate the validation loss
+    criterion = nn.CrossEntropyLoss()
 
     # running averages
-    loss_total, oa_total = 0.0, 0.0     # for now, we just log the loss and overall accuracy (OA)
+    loss_total, oa_total = 0.0, 0.0
 
     # iterate over dataLoader
     progressBar = trange(len(eval_loader["src_val"]), position=0, leave=True)
@@ -235,4 +218,4 @@ for epoch in range(100):
             time.sleep(1)  # Wait for 1 second before retrying
 
 
-  
+

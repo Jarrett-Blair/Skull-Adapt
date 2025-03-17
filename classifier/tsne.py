@@ -1,45 +1,23 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Jan 13 17:57:06 2024
-
-@author: blair
-"""
-
 import os
 import argparse
 import yaml
-import glob
 from tqdm import trange
 import numpy as np
 import pandas as pd
-import time
 
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.optim import SGD
 from torchvision import datasets, transforms
 
 # let's import our own classes and functions!
 os.chdir(r"C:\Users\blair\OneDrive - UBC\Skull-Adapt\classifier")
 from util import init_seed
-from model_cam import CustomResNet18
 
-
-import torch
-from tqdm import tqdm
-
-from pytorch_adapt.containers import Models, Optimizers
+from pytorch_adapt.containers import Models
 from pytorch_adapt.datasets import (
     DataloaderCreator,
-    CombinedSourceAndTargetDataset,
     SourceDataset,
-    TargetDataset,
 )
-from pytorch_adapt.hooks import ClassifierHook, BNMHook, BSPHook
-from pytorch_adapt.models import Discriminator, mnistC, mnistG
 from pytorch_adapt.utils.common_functions import batch_to_device
-from pytorch_adapt.validators import IMValidator
 
 parser = argparse.ArgumentParser(description='Train deep learning model.')
 parser.add_argument('--config', help='Path to config file', default='../configs/skull_MMD.yaml')
@@ -86,10 +64,6 @@ models = Models({"G": G, "C": C})
 
 
 models.eval()
- 
-# for now, we just log the loss and overall accuracy (OA)
-
-# iterate over dataLoader
 
 preds = []
 probs = []
@@ -309,7 +283,6 @@ def tsne_plot_overlay(data, data2, species = None, palette = 'viridis', domains 
         style = 'domain'
     
     markers = True
-    edgecolor = 'black'
     if title == "Source":
         markers = ['X']
     

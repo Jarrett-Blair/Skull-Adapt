@@ -1,48 +1,29 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jan  8 14:58:35 2024
-
-@author: blair
-"""
-
 import os
 import argparse
 import yaml
-import glob
 from tqdm import trange
 import numpy as np
 import random
 import cv2
-import itertools
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.optim import SGD
 from torchvision import datasets, transforms
 
 # let's import our own classes and functions!
 os.chdir(r"C:\Users\blair\OneDrive - UBC\Skull-Adapt\classifier")
 from util import init_seed
 
-import torch.nn as nn
-from torchvision.models import vgg19
-
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
-from pytorch_adapt.containers import Models, Optimizers
+from pytorch_adapt.containers import Models
 from pytorch_adapt.datasets import (
     DataloaderCreator,
-    CombinedSourceAndTargetDataset,
     SourceDataset,
-    TargetDataset,
 )
-from pytorch_adapt.hooks import ClassifierHook, BNMHook, BSPHook
-from pytorch_adapt.models import Discriminator, mnistC, mnistG
 from pytorch_adapt.utils.common_functions import batch_to_device
-from pytorch_adapt.validators import IMValidator
 
 
 def save_cams(loader, idxs, preds, species_list, model, target_layer, filepath):
@@ -134,10 +115,6 @@ combined_model = nn.Sequential(
 )
 
 combined_model.eval()
-
-# for now, we just log the loss and overall accuracy (OA)
-
-# iterate over dataLoader
 
 preds = []
 probs = []
